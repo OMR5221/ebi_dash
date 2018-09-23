@@ -29,7 +29,11 @@ import numpy as np
 import boto3
 
 # Get our custom models for queries:
-from app import query_models
+# from adhoc import query_models
+
+from datetime import datetime
+from sqlalchemy import (Table, Column, Integer, Numeric, String, DateTime, ForeignKey)
+from sqlalchemy.ext.declarative import declarative_base
 
 def intersect(lst1, lst2):
     return list(set(lst1) & set(lst2))
@@ -106,42 +110,61 @@ def pluralize_collection(base, local_cls, referred_cls, constraint):
 app = flask.Flask(__name__)
 
 app.config['DEBUG'] = True
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0'
 app.config['CORS_ALLOW_HEADERS'] = "Content-Type"
 
 # Expose the url route /api/ to requests from any origin:
 app.config['CORS_RESOURCES'] = {r"/api/*" : {"origins" : "*"}}
 
-# engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+int_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
 
-#metadata = MetaData()
-#metadata.reflect(bind=engine)
+Base = declarative_base()
 
-# we can reflect it ourselves from a database, using options
-# such as 'only' to limit what tables we look at...
-#metadata.reflect(engine, only=['INT_MKTCollectionDetails'])
+class VW_INT_Agg_MonthlyDonorsPerLocation(Base):
+
+	__tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
+	
+	id = Column(Integer, primary_key=True, autoincrement=True)
+	region_id = Column(Integer())
+	location_name = Column(String(100), index=True)
+	donation_type = Column(String(50))
+	yearmonth_num = Column(Integer())
+	yearmonth_name = Column(String(20))
+	num_donors = Column(Integer())
+	
+	def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
+		self.region_id = reg_id
+		self.location_name = loc_name
+		self.donation_type = don_desc
+		self.yearmonth_num = ym_num
+		self.yearmonth_name = ym_name
+		self.num_donors = num_dons
+		
+	def save(self):
+		session.add(self)
+		session.commit()
+		
+	@staticmethod
+	def get_all():
+		return NumDonorsLoc.query.all()
+		
+	def delete(self):
+		session.delete(self)
+		session.commit()
+		
+	def __repr__(self):
+		return "NumDonorsLoc(region_id={self.region_id}, " \
+		"location_name='{self.location_name}', " \
+		"donation_type='{self.donation_type}', " \
+		"yearmonth_num='{self.yearmonth_num}', " \
+		"yearmonth_name='{self.yearmonth_name}', " \
+		"num_donors={self.num_donors})".format(self=self)
+		
+VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(int_engine, checkfirst=True)
 
 session = reflect_all_tables_to_declarative('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
 
-
-# mktCollects = Table('mktCollects', metadata, autoload=True, autoload_with=engine)
-#print(type(mktCollects))
-
-# we can then produce a set of mappings from this MetaData.
-#Base = automap_base(metadata=metadata)
-
-#Base.prepare()
-
-# calling prepare() just sets up mapped classes and relationships.
-#Base.prepare(engine, reflect=True)
-			#classname_for_table=camelize_classname,
-            #name_for_collection_relationship=pluralize_collection)
-
-# mapped classes are now created with names by default
-# matching that of the table name.
-#mktCollects = Base.classes.INT_MKTCollectionDetails
-
-# session = Session(engine)
 
 donDetails = (session.query(INT_DIMLocation.RegionID,
 INT_DIMLocation.FinanceLocationName,
@@ -153,6 +176,8 @@ func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
 .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
 .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
 .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, cast((DimDate.Year+DimDate.Month),Integer),DimDate.MonthYear).all())
+
+print(type(donDetails))
 
 db = SQLAlchemy(app)
 
@@ -166,6 +191,6 @@ manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
 # Create API endpoints, which will be available at
 # localhost:####/api/<tablename> by default
 # Allowed HTTP methods can be specified as well:
-manager.create_api(donDetails, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
+# manager.create_api(donDetails, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
  
 app.run()
