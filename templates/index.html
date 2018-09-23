@@ -1,0 +1,115 @@
+<!-- testj2.html -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>{{config.APP_TITLE}}</title>
+
+<!-- 1. IMPORT THE visualiztions CSS STYLING -->
+<link rel="stylesheet" href="static/css/style.css" media="screen"/>
+<body>
+	<div id='chart'>
+		<!-- 2. HEADER with Title and INFO-->
+		<div id='title'>Donor Dashboard</div>
+		<div id="info">
+			This is an example dashboard for OneBlood displaying the number of donors per location.
+		</div>
+		<!-- 3. Placeholder for visual components. -->
+		<div id="mainviz">
+			<!-- BEGIN MENU BAR -->
+			<div id="ebi-menu">
+				<div id="date-select-start">
+					Collection Start Date
+					<select></select>
+				</div>
+				<div id="date-select-end">
+					Collection End Date
+					<select></select>
+				</div>
+				<div id="don-type-select">
+					Donation Type
+					<select></select>
+				</div>
+				<div id="loc-select">
+					Location
+					<select></select>
+				</div>
+			</div>
+		</div>
+		<!-- END MENU BAR -->
+		<!-- BEGIN VISUAL COMPONENETS -->
+		<div id='don-chart-holder' class='_dev'>
+			<!-- TIME LINE OF NUM OF DONS -->
+			<div id="dons-time"></div>
+			<!-- MAP AND TOOLTIP -->
+			<div id="don-map">
+				<div id="map-tooltip">
+					<h2></h2>
+					<p></p>
+				</div>
+			</div>
+			<!-- List of number of winners per Location -->
+			<div id="dons-loc-list">
+				<h2>Selected Locations</h2>
+				<table>
+					<thead>
+						<tr>
+							<th id='year-month'>Year-Month</th>
+							<th id='loc'>Location</th>
+							<th id='numDons'>Number of Donors</th>
+						</tr>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<!-- Location Detail BOX -->
+			<div id="location-detail">
+				<div id="mapPicBox"></div>
+				<div id='location-title'></div>
+				<div id='infobox'>
+					<div class='property'>
+						<div class='label'>Type</div>
+						<span name='type'></span>
+					</div>
+					<div class='property'>
+						<div class='label'>Population</div>
+						<span name='population'></span>
+					</div>
+					<div class='property'>
+						<div class='label'>PlaceHolder1</div>
+						<span name='ph1'></span>
+					</div>
+				</div>
+				<div id='detailBox'></div>
+				<div id='readmore'>
+					<a href='#'>Read more at Wikipedia</a>
+				</div>
+			</div>
+			<!-- Num Donors BAR chart -->
+			<div id="donors-bar"></div>
+		</div>
+	</div>
+	<!-- 4. The Javascript Files -->
+	<!-- 3rd party Library files -->
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.js">
+	</script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.20/topojson.min.js">
+	</script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/queue-async/1.0.7/queue.min.js">
+	</script>
+	<script
+		src="static/lib/crossfilter/min.js">
+	</script>
+	
+	<!-- JS Files for our Donor Elements -->
+	<script src="static/js/dondash_core.js" ></script>
+	<script src="static/js/dondash_menu.js" ></script>	
+	<script src="static/js/dondash_map.js" ></script>
+	<script src="static/js/dondash_bar.js" ></script>		
+	<script src="static/js/dondash_time.js" ></script>
+	<script src="static/js/dondash_details.js" ></script>
+	<!-- Main entry point for the app: -->
+	<script src="static/js/dondash_main.js" ></script>	
+</body>
