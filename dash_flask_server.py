@@ -37,7 +37,7 @@ def QueryData(start_date, end_date):
 
     plDonsbyMonthQuery = """
     select
-	RegionID,
+    RegionID,
     locationdepartmentname,
     FinanceLocationName,
     DonationDescription,
@@ -122,59 +122,42 @@ app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"
 
 # Begin main div for DASH:
 app.layout = html.Div(
-	children=[
-		# Title:
-		html.H3(children='Donor Marketing'),
-		# Date Picker Tool:
-		dcc.DatePickerRange(
-			id='date-picker-range',
-			#month_format='YYMD',
-			min_date_allowed=date_prior_2year,
-			max_date_allowed=c_date_month,
-			initial_visible_month=(datetime.today() - rd(months=1)).strftime('%Y-%m-%d'),
-			start_date=(datetime.today() - rd(months=1)).strftime('%Y-%m-%d'),
-			end_date=(datetime.today()).strftime('%Y-%m-%d')
+    children=[
+        # Title:
+        html.H3(children='Donor Marketing'),
+        # Date Picker Tool:
+        dcc.DatePickerRange(
+            id='date-picker-range',
+            #month_format='YYMD',
+            min_date_allowed=date_prior_2year,
+            max_date_allowed=c_date_month,
+            initial_visible_month=(datetime.today() - rd(months=1)).strftime('%Y-%m-%d'),
+            start_date=(datetime.today() - rd(months=1)).strftime('%Y-%m-%d'),
+            end_date=(datetime.today()).strftime('%Y-%m-%d')
+        ),
+        html.Div(id='output-container-date-picker-range'),
+        # TABLE of DAILY Values:
+        generate_table(plDons_df),
+        #DIV for dropdown menus:
+		dcc.Dropdown(
+			id='my-dropdown',
+			options=[
+				{'label': 'New York City', 'value': 'NYC'},
+				{'label': 'Montreal', 'value': 'MTL'},
+				{'label': 'San Francisco', 'value': 'SF'}
+			],
+			value='NYC'
 		),
-		html.Div(id='output-container-date-picker-range'),
-		# TABLE of DAILY Values:
-		generate_table(plDons_df),
-	
-	
-		#DIV for dropdown menus:
-		html.Div([
-		   html.P("Period"),
-		   dcc.Dropdown(id='period', 
-		   options= [{'label': i, 'value': i} 
-			  for i in ['5', '10', '15']], value='10')]
-		   style={'width': '31%', 'display': 'inline-block'}),
-
-		   
-		html.Div([
-		   html.P("Box plot Period"),
-		   dcc.Dropdown(id='box_plot_period',
-		   options=[{'label': i, 'value': i}
-			   for i in ['5', '10', '15']], value='10')],
-		   style={'width': '31%', 'margin-left': '3%', 'display': 'inline-block'}),
-
-		   
-		html.Div([
-		   html.P("Time frame"),
-		   dcc.Dropdown(id='timeframe',
-		   options=[{'label': i, 'value': i}
-			  for i in ['1', '2', '3', '4']], value='2')],
-		   style={'width': '31%', 'float': 'right', 'display': 'inline-block'}),
-		
-		
-		# Div for Graph:
-		html.Div([
-			# Graph Title
-			html.Div([ 
-			html.H3("Price(USD) " + str(dt.datetime.now().date()))
-			], className='Title'),
-			# LINE GRAPH: Monthly Donor Count
-			dcc.Graph(id='plDonors_MTD_Graph')
-		],className='pldonor_line_graph')
-	], classname='main-div')
+        # Div for Graph:
+        html.Div([
+            # Graph Title
+            html.Div([ 
+            html.H3("Donor Type Count for Date Range")
+            ], className='GraphTitle'),
+            # LINE GRAPH: Monthly Donor Count
+            dcc.Graph(id='plDonors_MTD_Graph')
+        ],className='pldonor_line_graph')
+    ])
 
 @server.route('/api/plDonors')
 def get_plMonthDonors():
