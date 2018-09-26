@@ -54,12 +54,12 @@ def reflect_all_tables_to_declarative(uri):
 
     metadata.reflect()
     
-    wanted_tables = ['INT_MKTCollectionDetails', 'INT_DIMLocation', 'Int_DimDonationType', 'DimDate']
+    wanted_tables = ['VW_INT_Agg_MonthlyDonorsPerLocation', 'VW_INT_Agg_DailyDonorsPerLocation']
 
     for tablename, tableobj in metadata.tables.items():
         try:
             if tablename in wanted_tables:
-                g[tablename] = type(str(tablename), (Base,), {'__table__' : tableobj, '__tablename__' : tablename })
+                g[tablename] = type(str(tablename), (Base,), {'__table__' : tableobj, '__tablename__' : str(tablename)})
                 print("Reflecting {0}".format(tablename))
         except sa.exc.ArgumentError:
             print("Missing Primary Key: {0}".format(tablename))
@@ -77,7 +77,8 @@ def reflect_all_tables_to_declarative(uri):
                                 })
             #for col in (metadata.tables[tablename]).columns:
             #    print(col)
-       
+    
+    """
     # Custom aggregation query classes:
     class VW_INT_Agg_MonthlyDonorsPerLocation(Base):
         __tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
@@ -125,6 +126,7 @@ def reflect_all_tables_to_declarative(uri):
     
     session = Session()
     
+    print("Query run START")
     donDetails = (session.query(INT_DIMLocation.RegionID,
     INT_DIMLocation.FinanceLocationName,
     Int_DimDonationType.DonationDescription,
@@ -135,9 +137,12 @@ def reflect_all_tables_to_declarative(uri):
     .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
     .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
     .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, cast((DimDate.Year+DimDate.Month),Integer),DimDate.MonthYear).all())
-
+    
+    print("Query run END")
+    
     dd_list = []
 
+    print("TABLE LOAD START")
     # list of tuples
     for dd in donDetails:
         nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
@@ -145,10 +150,15 @@ def reflect_all_tables_to_declarative(uri):
 
     session.bulk_save_objects(dd_list)
     session.commit()
+    print("TABLE LOAD END")
 
     print(dd_list[0])
+    """
     
-    # return session
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    return session
         
 
 def camelize_classname(base, tablename, table):
@@ -182,7 +192,9 @@ app.config['CORS_ALLOW_HEADERS'] = "Content-Type"
 # Expose the url route /api/ to requests from any origin:
 app.config['CORS_RESOURCES'] = {r"/api/*" : {"origins" : "*"}}
 
-reflect_all_tables_to_declarative('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+session = reflect_all_tables_to_declarative('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+
+# ddList = session.query(VW_INT_Agg_MonthlyDonorsPerLocation).all()
 
 db = SQLAlchemy(app)
 
@@ -196,6 +208,6 @@ manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
 # Create API endpoints, which will be available at
 # localhost:####/api/<tablename> by default
 # Allowed HTTP methods can be specified as well:
-# manager.create_api(donDetails, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
+manager.create_api(VW_INT_Agg_DailyDonorsPerLocation, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
  
 app.run()

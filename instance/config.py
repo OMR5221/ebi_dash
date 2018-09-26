@@ -5,7 +5,8 @@ class Config(object):
 	# Default settings:
 	DEBUG = False
 	CSRF_ENABLED = True
-	# SECRET = os.getenv('SECRET')
+	# SECRET_KEY = os.getenv('SECRET')
+	#ADMINS = frozenset(['oswald.ramirez@oneblood.org, '])
 	SQLALCHEMY_DATABASE_URI = 'mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0'
 	CORS_ALLOW_HEADERS = "Content-Type"
 	CORS_RESOURCES = {r"/api/*" : {"origins" : "*"}}
