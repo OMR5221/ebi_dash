@@ -29,6 +29,10 @@ from datetime import datetime
 from sqlalchemy import (Table, Column, Integer, Numeric, String, DateTime, ForeignKey)
 from sqlalchemy.ext.declarative import declarative_base
 
+import io
+import csv
+from psycopg2 import sql
+
 #from adhoc import query_models
 
 engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
@@ -229,17 +233,21 @@ def make_aggs():
     dd_tp = md_tp = []
 
     print("TABLE LOAD START")
-    # list of tuples
+    
+    print("CREATING MONTHLY OBJECTS")
     for md in monthlyDonDetails:
         nr = VW_INT_Agg_MonthlyDonorsPerLocation(md[0], md[1], md[2], md[3], md[4], md[5])
         md_tp.append(nr)
-        
+    print("CREATING DAILY OBJECTS")    
     for dd in dailyDonDetails:
         nr = VW_INT_Agg_DailyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
         dd_tp.append(nr)
 
+    print("SESSION SAVE 1")
     session.bulk_save_objects(md_tp)
+    print("SESSION SAVE 2")
     session.bulk_save_objects(dd_tp)
+    print("SESSION COMMIT")
     session.commit()
     print("TABLE LOAD END")
     
