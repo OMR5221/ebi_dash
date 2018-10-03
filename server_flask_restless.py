@@ -193,6 +193,8 @@ def make_aggs():
             "yearmonthday_name='{self.yearmonthdayName}', " \
             "num_donors={self.numDonors})".format(self=self)
         
+    # Create the Agg Tables:
+    VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
     VW_INT_Agg_DailyDonorsPerLocation.__table__.create(engine, checkfirst=True)
     
     print("MonthlyDonors QUERY START")
@@ -233,7 +235,7 @@ def make_aggs():
         md_tp.append(nr)
         
     for dd in dailyDonDetails:
-        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
+        nr = VW_INT_Agg_DailyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
         dd_tp.append(nr)
 
     session.bulk_save_objects(md_tp)
