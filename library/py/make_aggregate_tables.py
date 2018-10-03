@@ -1,3 +1,9 @@
+# sqlacodegen  'mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0'
+
+from sqlalchemy import (Table, Column, Integer, Numeric, Unicode, DateTime, ForeignKey)
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
 class VW_INT_Agg_MonthlyDonorsPerLocation(Base, session):
     _tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
     __table_args__ = {'useexisting': True} 

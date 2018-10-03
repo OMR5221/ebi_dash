@@ -31,10 +31,20 @@ from sqlalchemy.ext.declarative import declarative_base
 
 #from adhoc import query_models
 
+engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+# create an unbound base our objects will inherit from
+Base = declarative_base()
+metadata = MetaData(bind=engine)
+Base.metadata = metadata
+g = globals()
+metadata.reflect()
+Session = sessionmaker(bind=engine)
+session = Session()
+
 def intersect(lst1, lst2):
     return list(set(lst1) & set(lst2))
 
-def reflect_all_tables_to_declarative(uri):
+def reflect_all_tables_to_declarative(wanted_tables):
     """Reflects all tables to declaratives
 
     Given a valid engine URI and declarative_base base class
@@ -44,18 +54,16 @@ def reflect_all_tables_to_declarative(uri):
     """
 
     # create an unbound base our objects will inherit from
-    Base = declarative_base()
+    #Base = declarative_base()
 
-    engine = sa.create_engine(uri)
-    metadata = MetaData(bind=engine)
-    Base.metadata = metadata
+    #engine = sa.create_engine(uri)
+    #metadata = MetaData(bind=engine)
+    #Base.metadata = metadata
 
-    g = globals()
+    #g = globals()
 
-    metadata.reflect()
+    #metadata.reflect()
     
-    wanted_tables = ['VW_INT_Agg_MonthlyDonorsPerLocation', 'VW_INT_Agg_DailyDonorsPerLocation']
-
     for tablename, tableobj in metadata.tables.items():
         try:
             if tablename in wanted_tables:
@@ -78,87 +86,7 @@ def reflect_all_tables_to_declarative(uri):
             #for col in (metadata.tables[tablename]).columns:
             #    print(col)
     
-    """
-    # Custom aggregation query classes:
-    class VW_INT_Agg_MonthlyDonorsPerLocation(Base):
-        __tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
-        __table_args__ = {'useexisting': True} 
-        
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        region_id = Column(Integer())
-        location_name = Column(String(100), index=True)
-        donation_type = Column(String(50))
-        yearmonth_num = Column(Integer())
-        yearmonth_name = Column(String(20))
-        num_donors = Column(Integer())
-        
-        def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
-            self.region_id = reg_id
-            self.location_name = loc_name
-            self.donation_type = don_desc
-            self.yearmonth_num = ym_num
-            self.yearmonth_name = ym_name
-            self.num_donors = num_dons
-            
-        def save(self):
-            session.add(self)
-            session.commit()
-            
-        @staticmethod
-        def get_all():
-            return NumDonorsLoc.query.all()
-            
-        def delete(self):
-            session.delete(self)
-            session.commit()
-            
-        def __repr__(self):
-            return "NumDonorsLoc(region_id={self.region_id}, " \
-            "location_name='{self.location_name}', " \
-            "donation_type='{self.donation_type}', " \
-            "yearmonth_num='{self.yearmonth_num}', " \
-            "yearmonth_name='{self.yearmonth_name}', " \
-            "num_donors={self.num_donors})".format(self=self)
-        
-    VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
-
-    Session = sessionmaker(bind=engine)
-    
-    session = Session()
-    
-    print("Query run START")
-    donDetails = (session.query(INT_DIMLocation.RegionID,
-    INT_DIMLocation.FinanceLocationName,
-    Int_DimDonationType.DonationDescription,
-    cast((DimDate.Year+DimDate.Month),Integer).label('yyyymm'),
-    DimDate.MonthYear,
-    func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
-    .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
-    .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
-    .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
-    .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, cast((DimDate.Year+DimDate.Month),Integer),DimDate.MonthYear).all())
-    
-    print("Query run END")
-    
-    dd_list = []
-
-    print("TABLE LOAD START")
-    # list of tuples
-    for dd in donDetails:
-        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
-        dd_list.append(nr)
-
-    session.bulk_save_objects(dd_list)
-    session.commit()
-    print("TABLE LOAD END")
-
-    print(dd_list[0])
-    """
-    
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    
-    return session
+    #return session
         
 
 def camelize_classname(base, tablename, table):
@@ -180,6 +108,79 @@ def pluralize_collection(base, local_cls, referred_cls, constraint):
     pluralized = _pluralizer.plural(uncamelized)
     return pluralized
 
+
+def make_aggs():
+
+    # Custom aggregation query classes:
+    class VW_INT_Agg_MonthlyDonorsPerLocation(Base):
+        __tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
+        __table_args__ = {'useexisting': True} 
+        
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        regionID = Column(Integer())
+        locationName = Column(String(100), index=True)
+        donationType = Column(String(50))
+        yearmonthNum = Column(Integer())
+        yearmonthName = Column(String(20))
+        numDonors = Column(Integer())
+        
+        def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
+            self.regionID = reg_id
+            self.locationName = loc_name
+            self.donationType = don_desc
+            self.yearmonthNum = ym_num
+            self.yearmonthName = ym_name
+            self.numDonors = num_dons
+            
+        def save(self):
+            session.add(self)
+            session.commit()
+            
+        @staticmethod
+        def get_all():
+            return NumDonorsLoc.query.all()
+            
+        def delete(self):
+            session.delete(self)
+            session.commit()
+            
+        def __repr__(self):
+            return "NumDonorsLoc(region_id={self.regionID}, " \
+            "location_name='{self.locationName}', " \
+            "donation_type='{self.donationType}', " \
+            "yearmonth_num='{self.yearmonthNum}', " \
+            "yearmonth_name='{self.yearmonthName}', " \
+            "num_donors={self.numDonors})".format(self=self)
+        
+    VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
+    
+    print("Query run START")
+    donDetails = (session.query((INT_DIMLocation.RegionID).label('regionID'),
+    (INT_DIMLocation.FinanceLocationName).label('locationName'),
+    (Int_DimDonationType.DonationDescription).label('donationType'),
+    cast((DimDate.Year+DimDate.Month),Integer).label('yearmonthNum'),
+    (DimDate.MonthYear).label('yearmonthName'),
+    func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
+    .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
+    .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
+    .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
+    .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, cast((DimDate.Year+DimDate.Month),Integer),DimDate.MonthYear).all())
+    
+    print("Query run END")
+    
+    dd_list = []
+
+    print("TABLE LOAD START")
+    # list of tuples
+    for dd in donDetails:
+        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
+        dd_list.append(nr)
+
+    session.bulk_save_objects(dd_list)
+    session.commit()
+    print("TABLE LOAD END")
+
+    print(dd_list[0])
     
 # Create the Flask application and the Flask-sqlalchemy object:
 app = flask.Flask(__name__)
@@ -192,7 +193,11 @@ app.config['CORS_ALLOW_HEADERS'] = "Content-Type"
 # Expose the url route /api/ to requests from any origin:
 app.config['CORS_RESOURCES'] = {r"/api/*" : {"origins" : "*"}}
 
-session = reflect_all_tables_to_declarative('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+reflect_all_tables_to_declarative(['INT_MKTCollectionDetails', 'INT_DIMLocation', 'Int_DimDonationType', 'DimDate'])
+
+make_aggs()
+
+reflect_all_tables_to_declarative(['VW_INT_Agg_MonthlyDonorsPerLocation'])
 
 # ddList = session.query(VW_INT_Agg_MonthlyDonorsPerLocation).all()
 
@@ -208,6 +213,6 @@ manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
 # Create API endpoints, which will be available at
 # localhost:####/api/<tablename> by default
 # Allowed HTTP methods can be specified as well:
-manager.create_api(VW_INT_Agg_DailyDonorsPerLocation, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
+manager.create_api(VW_INT_Agg_MonthlyDonorsPerLocation, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
  
 app.run()
