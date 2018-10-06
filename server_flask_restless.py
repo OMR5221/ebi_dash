@@ -157,9 +157,13 @@ def make_aggs():
             "num_donors={self.numDonors})".format(self=self)
         
 <<<<<<< HEAD
+<<<<<<< HEAD
     # Create the Agg Tables:
     VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
     VW_INT_Agg_DailyDonorsPerLocation.__table__.create(engine, checkfirst=True)
+=======
+    VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
+>>>>>>> parent of 93596f5... 10032018: Added Daily Donor Table
 =======
     VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
 >>>>>>> parent of 93596f5... 10032018: Added Daily Donor Table
@@ -182,6 +186,7 @@ def make_aggs():
 
     print("TABLE LOAD START")
 <<<<<<< HEAD
+<<<<<<< HEAD
     
     print("CREATING MONTHLY OBJECTS")
     for md in monthlyDonDetails:
@@ -197,6 +202,14 @@ def make_aggs():
     print("SESSION SAVE 2")
     session.bulk_save_objects(dd_tp)
     print("SESSION COMMIT")
+=======
+    # list of tuples
+    for dd in donDetails:
+        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
+        dd_list.append(nr)
+
+    session.bulk_save_objects(dd_list)
+>>>>>>> parent of 93596f5... 10032018: Added Daily Donor Table
 =======
     # list of tuples
     for dd in donDetails:
