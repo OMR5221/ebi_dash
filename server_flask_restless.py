@@ -142,97 +142,46 @@ def make_aggs():
             
         @staticmethod
         def get_all():
-            return VW_INT_Agg_MonthlyDonorsPerLocation.query.all()
+            return NumDonorsLoc.query.all()
             
         def delete(self):
             session.delete(self)
             session.commit()
             
         def __repr__(self):
-            return "VW_INT_Agg_MonthlyDonorsPerLocation(region_id={self.regionID}, " \
+            return "NumDonorsLoc(region_id={self.regionID}, " \
             "location_name='{self.locationName}', " \
             "donation_type='{self.donationType}', " \
             "yearmonth_num='{self.yearmonthNum}', " \
             "yearmonth_name='{self.yearmonthName}', " \
             "num_donors={self.numDonors})".format(self=self)
-    
-        # Custom aggregation query classes:
-    class VW_INT_Agg_DailyDonorsPerLocation(Base):
-        __tablename__ = 'VW_INT_Agg_DailyDonorsPerLocation'
-        __table_args__ = {'useexisting': True} 
         
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        regionID = Column(Integer())
-        locationName = Column(String(100), index=True)
-        donationType = Column(String(50))
-        yearmonthdayNum = Column(Integer())
-        yearmonthdayName = Column(String(20))
-        numDonors = Column(Integer())
-        
-        def __init__(self, reg_id, loc_name, don_desc, ymd_num, ymd_name, num_dons):
-            self.regionID = reg_id
-            self.locationName = loc_name
-            self.donationType = don_desc
-            self.yearmonthdayNum = ymd_num
-            self.yearmonthdayName = ymd_name
-            self.numDonors = num_dons
-            
-        def save(self):
-            session.add(self)
-            session.commit()
-            
-        @staticmethod
-        def get_all():
-            return VW_INT_Agg_DailyDonorsPerLocation.query.all()
-            
-        def delete(self):
-            session.delete(self)
-            session.commit()
-            
-        def __repr__(self):
-            return "VW_INT_Agg_DailyDonorsPerLocation(region_id={self.regionID}, " \
-            "location_name='{self.locationName}', " \
-            "donation_type='{self.donationType}', " \
-            "yearmonthday_num='{self.yearmonthdayNum}', " \
-            "yearmonthday_name='{self.yearmonthdayName}', " \
-            "num_donors={self.numDonors})".format(self=self)
-        
+<<<<<<< HEAD
     # Create the Agg Tables:
     VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
     VW_INT_Agg_DailyDonorsPerLocation.__table__.create(engine, checkfirst=True)
+=======
+    VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(engine, checkfirst=True)
+>>>>>>> parent of 93596f5... 10032018: Added Daily Donor Table
     
-    print("MonthlyDonors QUERY START")
-    monthlyDonDetails = (session.query((INT_DIMLocation.RegionID).label('regionID'),
+    print("Query run START")
+    donDetails = (session.query((INT_DIMLocation.RegionID).label('regionID'),
     (INT_DIMLocation.FinanceLocationName).label('locationName'),
     (Int_DimDonationType.DonationDescription).label('donationType'),
-    cast(func.substring(cast(DimDate.DateKey, String), 0, 6),Integer).label('yearmonthNum'),
+    cast((DimDate.Year+DimDate.Month),Integer).label('yearmonthNum'),
     (DimDate.MonthYear).label('yearmonthName'),
     func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
     .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
     .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
     .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
-    .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription,DimDate.DateKey,DimDate.MonthYear).all())
+    .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, cast((DimDate.Year+DimDate.Month),Integer),DimDate.MonthYear).all())
     
-    print("MonthlyDonors QUERY END")
+    print("Query run END")
     
-    
-    print("DailyDonors QUERY START")
-    dailyDonDetails = (session.query((INT_DIMLocation.RegionID).label('regionID'),
-    (INT_DIMLocation.FinanceLocationName).label('locationName'),
-    (Int_DimDonationType.DonationDescription).label('donationType'),
-    cast((DimDate.DateKey),Integer).label('yearmonthdayNum'),
-    (DimDate.FullDateUSA).label('yearmonthdayName'),
-    func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
-    .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
-    .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
-    .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
-    .group_by(INT_DIMLocation.RegionID, INT_DIMLocation.FinanceLocationName, Int_DimDonationType.DonationDescription, DimDate.DateKey,DimDate.FullDateUSA).all())
-    
-    print("DailyDonors QUERY END")
-    
-    dd_tp = md_tp = []
+    dd_list = []
 
     print("TABLE LOAD START")
+<<<<<<< HEAD
     
     print("CREATING MONTHLY OBJECTS")
     for md in monthlyDonDetails:
@@ -248,8 +197,18 @@ def make_aggs():
     print("SESSION SAVE 2")
     session.bulk_save_objects(dd_tp)
     print("SESSION COMMIT")
+=======
+    # list of tuples
+    for dd in donDetails:
+        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
+        dd_list.append(nr)
+
+    session.bulk_save_objects(dd_list)
+>>>>>>> parent of 93596f5... 10032018: Added Daily Donor Table
     session.commit()
     print("TABLE LOAD END")
+
+    print(dd_list[0])
     
 # Create the Flask application and the Flask-sqlalchemy object:
 app = flask.Flask(__name__)
