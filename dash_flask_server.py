@@ -63,7 +63,7 @@ def getDonTypes():
     
     donType_df = pd.read_sql(donTypeQuery, sql3_engine)
     dt_dict = donType_df.to_dict('split')
-    dd_dt = [{'label': val, 'value': val} for val in dt_dict['data']]
+    dd_dt = [{'label': str(val), 'value': str(val)} for val in dt_dict['data']]
     return dd_dt
 
 def generate_table(dataframe, max_rows=10):
@@ -151,7 +151,7 @@ app.layout = html.Div(
         dcc.Dropdown(
             id='dontype-dropdown',
             options=dropdown_dt,
-            # value='RBC',
+            # value=1,
             multi=True,
 			placeholder="Select Donation Types:"
         ),
