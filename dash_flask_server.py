@@ -50,20 +50,42 @@ def QueryData(start_date, end_date):
 
     # mkt_text = text(plDonsbyMonthQuery)
     # mkt_res = conn.execute(mkt_text, minDate=20180701, maxDate=20180801).fetchall()
-    df = pd.read_sql(plDonsbyMonthQuery, engine)
+    df = pd.read_sql(plDonsbyMonthQuery, sql3_engine)
 
     # Convert date from string to date times
     df['yearmonthdayName'] = df['yearmonthdayName'].apply(dateutil.parser.parse, dayfirst=False)
     
     return df
+# Get the donation types from the source SQL server instance:
+def getDonTypes():
 
-	
+    donTypeQuery = text('select distinct donationType from VW_INT_Agg_MonthlyDonorsPerLocation')
+    
+    donType_df = pd.read_sql(donTypeQuery, sql3_engine)
+    dt_dict = donType_df.to_dict('split')
+    dd_dt = [{'label': val, 'value': val} for val in dt_dict['data']]
+    return dd_dt
+
+def generate_table(dataframe, max_rows=10):
+
+    return html.Table(
+        # Header
+        [html.Tr([html.Th(col) for col in dataframe.columns])] +
+
+        # Body
+        [html.Tr([
+            html.Td(dataframe.iloc[i][col]) 
+            for col in dataframe.columns
+        ]) 
+        for i in range(min(len(dataframe), max_rows))]
+    )    
+    
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Connect to MS SQL Server via Windows Authentification:
-# engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
-engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
-conn = engine.connect()
+src_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+sql3_engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
+conn = sql3_engine.connect()
 
 figureName = 'Donor Type Donors by Date Range'
 
@@ -83,6 +105,7 @@ date_prior_2year = (today_date - rd(years=2)).strftime('%Y-%m-%d')
 # plDons_df = pd.read_csv('../extractors/data/mktCollect_Jul18_platelet_dons.csv')
 
 plDons_df = GetUpdates(p_date_month, c_date_month)
+dropdown_dt = getDonTypes()
 
 """
 aggregations = {
@@ -94,24 +117,8 @@ grouped = date_groups.agg(aggregations)
 grouped.columns = ["num_persons"]
 """
 
-
 #fig, ax = plt.subplots(figsize=(15,7))
 #plDons_df.groupby(['FullDateUSA']).count()['person_id'].plot(ax=ax)
-
-
-def generate_table(dataframe, max_rows=10):
-
-    return html.Table(
-        # Header
-        [html.Tr([html.Th(col) for col in dataframe.columns])] +
-
-        # Body
-        [html.Tr([
-            html.Td(dataframe.iloc[i][col]) 
-            for col in dataframe.columns
-        ]) 
-        for i in range(min(len(dataframe), max_rows))]
-    )
 
 
 server = Flask(__name__)
@@ -141,15 +148,14 @@ app.layout = html.Div(
         # TABLE of DAILY Values:
         generate_table(plDons_df),
         #DIV for dropdown menus:
-		dcc.Dropdown(
-			id='my-dropdown',
-			options=[
-				{'label': 'New York City', 'value': 'NYC'},
-				{'label': 'Montreal', 'value': 'MTL'},
-				{'label': 'San Francisco', 'value': 'SF'}
-			],
-			value='NYC'
-		),
+        dcc.Dropdown(
+            id='dontype-dropdown',
+            options=dropdown_dt,
+            # value='RBC',
+            multi=True,
+			placeholder="Select Donation Types:"
+        ),
+		html.Div(id='output-container-don-type-selections'),
         # Div for Graph:
         html.Div([
             # Graph Title
@@ -160,7 +166,7 @@ app.layout = html.Div(
             dcc.Graph(id='plDonors_MTD_Graph')
         ],className='pldonor_line_graph')
     ])
-
+    
 @server.route('/api/plDailyDonors')
 def get_plMonthDonors():
 
@@ -226,6 +232,13 @@ def update_figure(start, end):
         'data':[{'x': grouped.index, 'y': grouped.num_persons, 'type': 'line', 'name': figureName}],
         'layout': {'title': figureName}
     }
+	
+# DropDown callback:
+@app.callback(
+    dash.dependencies.Output('output-container-don-type-selections', 'children'),
+    [dash.dependencies.Input('dontype-dropdown', 'value')])
+def update_output(value):
+    return 'You have selected "{}"'.format(value)
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8050, host='127.0.0.1')
