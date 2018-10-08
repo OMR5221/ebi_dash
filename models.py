@@ -4,7 +4,8 @@ from config import db, ma
 
 class VW_INT_Agg_MonthlyDonorsPerLocation(db.Model):
 	__tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
-	__table_args__ = {'useexisting': True} 
+	__table_args__ = {'useexisting': True}
+	__bind_key__ = 'output'
 
 	id = Column(Integer, primary_key=True, autoincrement=True)
 	regionID = Column(Integer())
@@ -51,7 +52,8 @@ class VW_INT_Agg_MonthlyDonorsPerLocationSchema(ma.ModelSchema):
 		
 class VW_INT_Agg_DailyDonorsPerLocation(db.Model):
 	__tablename__ = 'VW_INT_Agg_DailyDonorsPerLocation'
-	__table_args__ = {'useexisting': True} 
+	__table_args__ = {'useexisting': True}
+	__bind_key__ = 'output'
 
 	id = Column(Integer, primary_key=True, autoincrement=True)
 	regionID = Column(Integer())

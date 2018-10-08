@@ -111,8 +111,6 @@ def generate_table(dataframe, max_rows=10):
     )
 
 
-
-
 server = Flask(__name__)
 
 db = dataset.connect('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
@@ -159,7 +157,7 @@ app.layout = html.Div(
         ],className='pldonor_line_graph')
     ])
 
-@server.route('/api/plDonors')
+@server.route('/api/plMonthlyDonors')
 def get_plMonthDonors():
 
     print('Request args: ' + str(dict(request.args)))
@@ -180,7 +178,6 @@ def get_plMonthDonors():
             
             
     #print(query_dict) = {'CollectionDateSK' : ['20180604']}
-    
     plDonsDate = db['VW_INT_Agg_DailyDonorsPerLocation'].find(**query_dict)
     
     #list(plDons.find(_limit=10))

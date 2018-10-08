@@ -44,7 +44,6 @@ paths:
                 numDonors:
                   type: number
                   description: Number of Donors by date
-Comment: >
   /monthlyDonors:
     get:
       operationId: VW_INT_Agg_MonthlyDonorsPerLocation.read_all
@@ -59,18 +58,25 @@ Comment: >
             type: array
             items:
               properties:
-                person_id:
+                region_id:
                   type: string
-                  description: Id of the person
-                fname:
+                  description: Region ID of the donation by MonthYear
+                locationName:
                   type: string
-                  description: First name of the person
-                lname:
+                  description: Location Name of the donation by MonthYear
+                donationType:
                   type: string
-                  description: Last name of the person
-                timestamp:
+                  description: Donation Type of the donation by MonthYear
+                yearmonthdayNum:
+                  type: number
+                  description: MonthYear Key of the donation
+                yearmonthdayName:
                   type: string
-                  description: Creation/Update timestamp of the person
+                  description: MonthYear Name of the donation                
+                numDonors:
+                  type: number
+                  description: Number of Donors by MonthYear
+Comment: >
     post:
       operationId: people.create
       tags:
