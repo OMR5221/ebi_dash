@@ -145,7 +145,7 @@ def make_monthly():
     VW_INT_Agg_MonthlyDonorsPerLocation.__table__.create(output_engine, checkfirst=True)
     
     print("Query run START")
-    donDetails = (inputsession.query((INT_DIMLocation.RegionID).label('regionID'),
+    donMonthlyDetails = (inputsession.query((INT_DIMLocation.RegionID).label('regionID'),
     (INT_DIMLocation.FinanceLocationName).label('locationName'),
     (Int_DimDonationType.DonationDescription).label('donationType'),
     cast((DimDate.Year+DimDate.Month),Integer).label('yearmonthNum'),
@@ -158,19 +158,19 @@ def make_monthly():
     
     print("Query run END")
     
-    dd_list = []
+    md_list = []
 
     print("TABLE LOAD START")
     # list of tuples
-    for dd in donDetails:
-        nr = VW_INT_Agg_MonthlyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
-        dd_list.append(nr)
+    for md in donMonthlyDetails:
+        nr = VW_INT_Agg_MonthlyDonorsPerLocation(md[0], md[1], md[2], md[3], md[4], md[5])
+        md_list.append(nr)
 
-    outputsession.bulk_save_objects(dd_list)
+    outputsession.bulk_save_objects(md_list)
     outputsession.commit()
     print("TABLE LOAD END")
 
-    print(dd_list[0])
+    print(md_list[0])
     
 
 def make_daily():
@@ -193,8 +193,8 @@ def make_daily():
             self.regionID = reg_id
             self.locationName = loc_name
             self.donationType = don_desc
-            self.yearmonthNum = ym_num
-            self.yearmonthName = ym_name
+            self.yearmonthdayNum = ym_num
+            self.yearmonthdayName = ym_name
             self.numDonors = num_dons
             
         def save(self):
@@ -213,17 +213,17 @@ def make_daily():
             return "NumDonorsLoc(region_id={self.regionID}, " \
             "location_name='{self.locationName}', " \
             "donation_type='{self.donationType}', " \
-            "yearmonth_num='{self.yearmonthNum}', " \
-            "yearmonth_name='{self.yearmonthName}', " \
+            "yearmonthdayNum='{self.yearmonthdayNum}', " \
+            "yearmonthdayName='{self.yearmonthdayName}', " \
             "num_donors={self.numDonors})".format(self=self)
         
     VW_INT_Agg_DailyDonorsPerLocation.__table__.create(output_engine, checkfirst=True)
     
     print("Query run START")
-    donDetails = (inputsession.query((INT_DIMLocation.RegionID).label('regionID'),
+    donDailyDetails = (inputsession.query((INT_DIMLocation.RegionID).label('regionID'),
     (INT_DIMLocation.FinanceLocationName).label('locationName'),
     (Int_DimDonationType.DonationDescription).label('donationType'),
-    cast((DimDate.DateKey),Integer).label('yearmonthdayNum'),
+    (DimDate.DateKey).label('yearmonthdayNum'),
     (DimDate.FullDateUSA).label('yearmonthdayName'),
     func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
     .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
@@ -237,7 +237,7 @@ def make_daily():
 
     print("TABLE LOAD START")
     # list of tuples
-    for dd in donDetails:
+    for dd in donDailyDetails:
         nr = VW_INT_Agg_DailyDonorsPerLocation(dd[0], dd[1], dd[2], dd[3], dd[4], dd[5])
         dd_list.append(nr)
 
@@ -252,7 +252,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
  
 SQLALCHEMY_BINDS = {
     'input': 'pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0',
-    'output': 'sqlite:////' + os.path.join(basedir, 'ebidash.db')
+    'output': 'sqlite:///' + os.path.join(basedir, 'ebidash.db')
 }
 input_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
 output_engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
@@ -285,7 +285,7 @@ make_monthly()
 print("Build Daily")
 make_daily()
 
-reflect_all_tables_to_declarative(['VW_INT_Agg_MonthlyDonorsPerLocation'])
+reflect_all_tables_to_declarative(['VW_INT_Agg_MonthlyDonorsPerLocation', 'VW_INT_Agg_DailyDonorsPerLocation'])
 
 # ddList = session.query(VW_INT_Agg_MonthlyDonorsPerLocation).all()
 
@@ -305,5 +305,6 @@ manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
 # localhost:####/api/<tablename> by default
 # Allowed HTTP methods can be specified as well:
 manager.create_api(VW_INT_Agg_MonthlyDonorsPerLocation, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
- 
+manager.create_api(VW_INT_Agg_DailyDonorsPerLocation, methods=['GET'],max_results_per_page=1000) # Limit max results to 1000
+
 app.run(debug=True, use_reloader=False)
