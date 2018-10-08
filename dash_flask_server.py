@@ -6,6 +6,7 @@ import datetime
 from json import dumps
 import flask_restless
 import re
+import os
 import inflect
 import dash
 import dash_core_components as dcc
@@ -36,16 +37,14 @@ def GetDateInt(date):
 def QueryData(start_date, end_date):
 
     plDonsbyMonthQuery = """
-    select
-    RegionID,
-    locationdepartmentname,
-    FinanceLocationName,
-    DonationDescription,
-    yearmonthday_num,
-    yearmonthday_name,
+    select regionID,
+    locationName,
+    donationType,
+    yearmonthdayNum,
+    yearmonthdayName,
     numDonors
     from VW_INT_Agg_DailyDonorsPerLocation
-    WHERE YEARMONTHDAY_NUM >= '{0}' AND YEARMONTHDAY_NUM <= '{1}'
+    WHERE yearmonthdayNum >= '{0}' AND yearmonthdayNum <= '{1}'
     """.format(start_date, end_date)
 
 
@@ -54,12 +53,16 @@ def QueryData(start_date, end_date):
     df = pd.read_sql(plDonsbyMonthQuery, engine)
 
     # Convert date from string to date times
-    df['yearmonthday_name'] = df['yearmonthday_name'].apply(dateutil.parser.parse, dayfirst=False)
+    df['yearmonthdayName'] = df['yearmonthdayName'].apply(dateutil.parser.parse, dayfirst=False)
     
     return df
 
+	
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 # Connect to MS SQL Server via Windows Authentification:
-engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+# engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
 conn = engine.connect()
 
 figureName = 'Donor Type Donors by Date Range'
@@ -113,7 +116,8 @@ def generate_table(dataframe, max_rows=10):
 
 server = Flask(__name__)
 
-db = dataset.connect('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+# db = dataset.connect('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
+db = dataset.connect('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
 
 app = dash.Dash(__name__, server=server,url_base_pathname='/ebi_dash/', csrf_protect=False)
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
@@ -157,18 +161,17 @@ app.layout = html.Div(
         ],className='pldonor_line_graph')
     ])
 
-@server.route('/api/plMonthlyDonors')
+@server.route('/api/plDailyDonors')
 def get_plMonthDonors():
 
     print('Request args: ' + str(dict(request.args)))
     query_dict = {}
     
-    for key in ['RegionID',
-    'locationdepartmentname',
-    'FinanceLocationName',
-    'DonationDescription',
-    'yearmonthday_num',
-    'yearmonthday_name',
+    for key in ['regionID',
+    'locationName',
+    'donationType',
+    'yearmonthdayNum',
+    'yearmonthdayName',
     'numDonors']:
         # Request the field from database model
         arg = request.args.get(key)
@@ -182,7 +185,7 @@ def get_plMonthDonors():
     
     #list(plDons.find(_limit=10))
     if plDonsDate:
-        return dumps([pl for pl in plDonsDate], default=datetime_handler)
+        return dumps([pl for pl in plDonsDate])
     abort(404)
 
 
@@ -214,7 +217,7 @@ def update_figure(start, end):
     filtered_df = GetUpdates(start, end)
     
     aggregations={'numDonors': 'sum'}
-    date_groups = filtered_df.groupby('yearmonthday_name')
+    date_groups = filtered_df.groupby('yearmonthdayName')
     grouped = date_groups.agg(aggregations)
     grouped.columns = ["num_persons"]
 
