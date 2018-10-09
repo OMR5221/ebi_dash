@@ -63,7 +63,7 @@ def getDonTypes():
     
     donType_df = pd.read_sql(donTypeQuery, sql3_engine)
     dt_dict = donType_df.to_dict('split')
-    dd_dt = [{'label': str(val), 'value': str(val)} for val in dt_dict['data']]
+    dd_dt = [{'label': ''.join(val), 'value': ''.join(val)} for val in dt_dict['data']]
     return dd_dt
 
 def generate_table(dataframe, max_rows=10):
@@ -153,9 +153,9 @@ app.layout = html.Div(
             options=dropdown_dt,
             # value=1,
             multi=True,
-			placeholder="Select Donation Types:"
+            placeholder="Select Donation Types:"
         ),
-		html.Div(id='output-container-don-type-selections'),
+        html.Div(id='output-container-dontype-select'),
         # Div for Graph:
         html.Div([
             # Graph Title
@@ -184,8 +184,7 @@ def get_plMonthDonors():
         
         if arg:
             query_dict[key] = arg
-            
-            
+             
     #print(query_dict) = {'CollectionDateSK' : ['20180604']}
     plDonsDate = db['VW_INT_Agg_DailyDonorsPerLocation'].find(**query_dict)
     
@@ -213,17 +212,29 @@ def update_output(start_date, end_date):
         return 'Select a date to see it displayed here'
     else:
         return string_prefix
+        
+# DropDown callback:
+@app.callback(
+    dash.dependencies.Output('output-container-dontype-select', 'children'),
+    [dash.dependencies.Input('dontype-dropdown', 'value')])
+def update_output(value):
+    return 'You have selected "{}"'.format(value)
+
     
 @app.callback(
     dash.dependencies.Output('plDonors_MTD_Graph', 'figure'),
     [dash.dependencies.Input('date-picker-range', 'start_date'),
-    dash.dependencies.Input('date-picker-range', 'end_date')])
-def update_figure(start, end):
+    dash.dependencies.Input('date-picker-range', 'end_date'),
+    dash.dependencies.Input('dontype-dropdown', 'value')])
+def update_figure(start, end, value):
 
     filtered_df = GetUpdates(start, end)
     
+    if value != None:
+        filtered_df = filtered_df.loc[filtered_df['donationType'].isin(value)]
+    
     aggregations={'numDonors': 'sum'}
-    date_groups = filtered_df.groupby('yearmonthdayName')
+    date_groups = filtered_df.groupby(['yearmonthdayName'])
     grouped = date_groups.agg(aggregations)
     grouped.columns = ["num_persons"]
 
@@ -232,14 +243,11 @@ def update_figure(start, end):
         'data':[{'x': grouped.index, 'y': grouped.num_persons, 'type': 'line', 'name': figureName}],
         'layout': {'title': figureName}
     }
-	
-# DropDown callback:
-@app.callback(
-    dash.dependencies.Output('output-container-don-type-selections', 'children'),
-    [dash.dependencies.Input('dontype-dropdown', 'value')])
-def update_output(value):
-    return 'You have selected "{}"'.format(value)
+    
 
+    
+
+    
 if __name__ == '__main__':
     app.run_server(debug=True, port=8050, host='127.0.0.1')
     app.run_server(debug=True)
