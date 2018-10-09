@@ -1,5 +1,6 @@
 from datetime import datetime
 from config import db, ma
+from sqlalchemy import (Table, Column, Integer, String, MetaData, ForeignKey, Numeric, cast, func, create_engine)
 
 
 class VW_INT_Agg_MonthlyDonorsPerLocation(db.Model):
@@ -57,18 +58,18 @@ class VW_INT_Agg_DailyDonorsPerLocation(db.Model):
 
 	id = Column(Integer, primary_key=True, autoincrement=True)
 	regionID = Column(Integer())
-	locationName = Column(String(100), index=True)
+	locationName = Column(String(100))
 	donationType = Column(String(50))
-	yearmonthNum = Column(Integer())
-	yearmonthName = Column(String(20))
+	yearmonthdayNum = Column(Integer())
+	yearmonthdayName = Column(String(20))
 	numDonors = Column(Integer())
 
 	def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
 		self.regionID = reg_id
 		self.locationName = loc_name
 		self.donationType = don_desc
-		self.yearmonthNum = ym_num
-		self.yearmonthName = ym_name
+		self.yearmonthdayNum = ym_num
+		self.yearmonthdayName = ym_name
 		self.numDonors = num_dons
 		
 	def save(self):
@@ -77,18 +78,18 @@ class VW_INT_Agg_DailyDonorsPerLocation(db.Model):
 		
 	@staticmethod
 	def get_all():
-		return VW_INT_Agg_DailyDonorsPerLocation.query.all()
+		return NumDonorsLoc.query.all()
 		
 	def delete(self):
 		session.delete(self)
 		session.commit()
 		
 	def __repr__(self):
-		return "VW_INT_Agg_DailyDonorsPerLocation(region_id={self.regionID}, " \
+		return "NumDonorsLoc(region_id={self.regionID}, " \
 		"location_name='{self.locationName}', " \
 		"donation_type='{self.donationType}', " \
-		"yearmonth_num='{self.yearmonthNum}', " \
-		"yearmonth_name='{self.yearmonthName}', " \
+		"yearmonthdayNum='{self.yearmonthdayNum}', " \
+		"yearmonthdayName='{self.yearmonthdayName}', " \
 		"num_donors={self.numDonors})".format(self=self)
 
 
