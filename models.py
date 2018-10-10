@@ -6,15 +6,15 @@ from sqlalchemy import (Table, Column, Integer, String, MetaData, ForeignKey, Nu
 class VW_INT_Agg_MonthlyDonorsPerLocation(db.Model):
 	__tablename__ = 'VW_INT_Agg_MonthlyDonorsPerLocation'
 	__table_args__ = {'useexisting': True}
-	__bind_key__ = 'output'
+	#__bind_key__ = 'output'
 
-	id = Column(Integer, primary_key=True, autoincrement=True)
-	regionID = Column(Integer())
-	locationName = Column(String(100), index=True)
-	donationType = Column(String(50))
-	yearmonthNum = Column(Integer())
-	yearmonthName = Column(String(20))
-	numDonors = Column(Integer())
+	id = db.Column(Integer, primary_key=True, autoincrement=True)
+	regionID = db.Column(Integer())
+	locationName = db.Column(String(100), index=True)
+	donationType = db.Column(String(50))
+	yearmonthNum = db.Column(Integer())
+	yearmonthName = db.Column(String(20))
+	numDonors = db.Column(Integer())
 
 	def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
 		self.regionID = reg_id
@@ -54,15 +54,15 @@ class VW_INT_Agg_MonthlyDonorsPerLocationSchema(ma.ModelSchema):
 class VW_INT_Agg_DailyDonorsPerLocation(db.Model):
 	__tablename__ = 'VW_INT_Agg_DailyDonorsPerLocation'
 	__table_args__ = {'useexisting': True}
-	__bind_key__ = 'output'
+	#__bind_key__ = 'output'
 
-	id = Column(Integer, primary_key=True, autoincrement=True)
-	regionID = Column(Integer())
-	locationName = Column(String(100))
-	donationType = Column(String(50))
-	yearmonthdayNum = Column(Integer())
-	yearmonthdayName = Column(String(20))
-	numDonors = Column(Integer())
+	id = db.Column(Integer, primary_key=True, autoincrement=True)
+	regionID = db.Column(Integer())
+	locationName = db.Column(String(100))
+	donationType = db.Column(String(50))
+	yearmonthdayNum = db.Column(Integer())
+	yearmonthdayName = db.Column(String(20))
+	numDonors = db.Column(Integer())
 
 	def __init__(self, reg_id, loc_name, don_desc, ym_num, ym_name, num_dons):
 		self.regionID = reg_id
@@ -78,14 +78,14 @@ class VW_INT_Agg_DailyDonorsPerLocation(db.Model):
 		
 	@staticmethod
 	def get_all():
-		return NumDonorsLoc.query.all()
+		return VW_INT_Agg_DailyDonorsPerLocation.query.all()
 		
 	def delete(self):
 		session.delete(self)
 		session.commit()
 		
 	def __repr__(self):
-		return "NumDonorsLoc(region_id={self.regionID}, " \
+		return "VW_INT_Agg_DailyDonorsPerLocation(region_id={self.regionID}, " \
 		"location_name='{self.locationName}', " \
 		"donation_type='{self.donationType}', " \
 		"yearmonthdayNum='{self.yearmonthdayNum}', " \
