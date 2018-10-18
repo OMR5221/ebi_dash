@@ -1,0 +1,78 @@
+swagger: "2.0"
+info:
+  description: This is the swagger file that goes with our server code
+  version: "1.0.0"
+  title: "EBI Dashboard"
+consumes:
+  - application/json
+produces:
+  - application/json
+
+basePath: /api
+
+# Paths supported by the server application
+paths:
+  /dailyDonors:
+    get:
+      operationId: VW_INT_Agg_DailyDonorsPerLocation.read_all_daily
+      tags:
+        - DailyDonorsPerLocation
+      summary: Read the entire set of daily donors
+      description: Read the entire set of daily donors
+      responses:
+        200:
+          description: Successfully read daily donors
+          schema:
+            type: array
+            items:
+              properties:
+                region_id:
+                  type: string
+                  description: Region ID of the donation by date
+                locationName:
+                  type: string
+                  description: Location Name of the donation by date
+                donationType:
+                  type: string
+                  description: Donation Type of the donation by date
+                yearmonthdayNum:
+                  type: number
+                  description: DateKey of the donation
+                yearmonthdayName:
+                  type: string
+                  description: Date Name of the donation                
+                numDonors:
+                  type: number
+                  description: Number of Donors by date
+  /monthlyDonors:
+    get:
+      operationId: VW_INT_Agg_MonthlyDonorsPerLocation.read_all_monthly
+      tags:
+        - MonthlyDonorsPerLocation
+      summary: Read the entire set of monthly donors
+      description: Read the entire set of monthly donors
+      responses:
+        200:
+          description: Successfully read monthly donors
+          schema:
+            type: array
+            items:
+              properties:
+                region_id:
+                  type: string
+                  description: Region ID of the donation by MonthYear
+                locationName:
+                  type: string
+                  description: Location Name of the donation by MonthYear
+                donationType:
+                  type: string
+                  description: Donation Type of the donation by MonthYear
+                yearmonthdayNum:
+                  type: number
+                  description: MonthYear Key of the donation
+                yearmonthdayName:
+                  type: string
+                  description: MonthYear Name of the donation                
+                numDonors:
+                  type: number
+                  description: Number of Donors by MonthYear
