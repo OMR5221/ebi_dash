@@ -29,7 +29,6 @@ import boto3
 # from adhoc import query_models
 
 from datetime import datetime
-from sqlalchemy import (Table, Column, Integer, Numeric, String, DateTime, ForeignKey)
 from sqlalchemy.ext.declarative import declarative_base
 from models import *
 
@@ -40,38 +39,42 @@ def reflect_all_tables_to_declarative(wanted_tables):
     reflects all tables and imports them to the global namespace.
     Returns a session object bound to the engine created.
     """
-
-    # create an unbound base our objects will inherit from
-    #Base = declarative_base()
-
-    #engine = sa.create_engine(uri)
-    #metadata = MetaData(bind=engine)
-    #Base.metadata = metadata
-
-    #g = globals()
-
-    #metadata.reflect()
     
-    for tablename, tableobj in metadata.tables.items():
-        try:
-            if tablename in wanted_tables:
-                g[tablename] = type(str(tablename), (Base,), {'__table__' : tableobj, '__tablename__' : str(tablename)})
-                print("Reflecting {0}".format(tablename))
-        except sa.exc.ArgumentError:
-            print("Missing Primary Key: {0}".format(tablename))
-            for col in tableobj.c:
-                #if re.match(".*sk", str(col), re.I):
-                print(col)
-                # print(re.match('*SK', col))
-            g[tablename] = type(str(tablename), (Base,), 
-                                {'__table__' : tableobj,
-                                 '__tablename__' : tablename,
-                                 '__mapper_args__' : {
-                                        'primary_key': [col for col in tableobj.c if re.match(".*sk", str(col), re.I)]
-                                        #PrimaryKeyConstraint(re.match(r'*SK', tablename, re.I))
-                                     }
-                                })
-								
+    for uri, tables in wanted_tables.items():
+    
+        # create an unbound base our objects will inherit from
+        Base = declarative_base()
+        engine = sa.create_engine(uri)
+        metadata = MetaData(bind=engine)
+        Base.metadata = metadata
+
+        #g = globals()
+
+        metadata.reflect()
+        
+        for tablename, tableobj in metadata.tables.items():
+            try:
+                if tablename in tables:
+                    g[tablename] = type(str(tablename.replace(" ", "")), (Base,), {'__table__' : tableobj, '__tablename__' : str(tablename.replace(" ", ""))})
+                    print("Reflecting {0}".format(tablename))
+            except sa.exc.ArgumentError:
+                print("Missing Primary Key: {0}".format(tablename))
+                for col in tableobj.c:
+                    #if re.match(".*sk", str(col), re.I):
+                    print(col)
+                    # print(re.match('*SK', col))
+                print("Reflecting {0}".format(tablename))    
+                g[str(tablename.replace(" ", ""))] = type(str(tablename.replace(" ", "")), (Base,), 
+                                    {'__table__' : tableobj,
+                                     '__tablename__' : str(tablename.replace(" ", "")),
+                                     '__mapper_args__' : {
+                                            'primary_key': [col for col in tableobj.c if re.match(".*sk|.*key", str(col), re.I)]
+                                            #PrimaryKeyConstraint(re.match(r'*SK', tablename, re.I))
+                                         }
+                                    })
+                                
+    Session = sessionmaker()
+    return Session()
 
 def pop_monthlyDonors():
         
@@ -137,33 +140,96 @@ def pop_dailyDonors():
     print("TABLE LOAD END")
 
     print(dd_list[0])
+    
+    
+def pop_yearlyDonorsbyCounty():
+        
+    VW_INT_Agg_YearlyDonorsbyCounty.__table__.create(output_engine, checkfirst=True)
+    
+    print("Query run START")
+    donCountyYearly = (inputsession.query((DimDate.Year).label('year'),
+    func.min(STG_HEMAZipCodeMaster.Longitude).label('minLong'),
+    func.max(STG_HEMAZipCodeMaster.Longitude).label('maxLong'),
+    func.min(STG_HEMAZipCodeMaster.Latitude).label('minLat'),
+    func.max(STG_HEMAZipCodeMaster.Latitude).label('maxLat'),
+    (STG_HEMAZipCodeMaster.CountyCode).label('FIPS'),
+    (STG_HEMAZipCodeMaster.CountyName).label('CountyName'),
+    func.count(INT_MKTCollectionDetails.personid).label('numDonors'))
+	.filter(STG_HEMAZipCodeMaster.ZipCode == INT_MKTCollectionDetails.PersonZipCode)
+    .filter(INT_MKTCollectionDetails.LocationSK == INT_DIMLocation.LocationSK)
+    .filter(INT_MKTCollectionDetails.DonationTypeSK == Int_DimDonationType.DonationTypeSk)
+    .filter(INT_MKTCollectionDetails.CollectionDateSK == DimDate.DateKey)
+    .group_by(DimDate.Year,STG_HEMAZipCodeMaster.CountyCode,STG_HEMAZipCodeMaster.CountyName).all())
+    
+    print("Query run END")
+    
+    cy_list = []
 
-	
+    print("TABLE LOAD START")
+    # list of tuples
+    for cy in donCountyYearly:
+        nr = VW_INT_Agg_YearlyDonorsbyCounty(cy[0], cy[1], cy[2], cy[3],cy[4], cy[5], cy[6], cy[7])
+        cy_list.append(nr)
+
+    outputsession.bulk_save_objects(cy_list)
+    outputsession.commit()
+    print("TABLE LOAD END")
+
+    print(dd_list[0])
+
+    
 # Begin main processing:
 basedir = os.path.abspath(os.path.dirname(__file__))
  
 SQLALCHEMY_BINDS = {
-    'input': 'pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0',
+    'input_int': 'mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0',
+    'input_stg': 'mssql+pyodbc://ORLEBIDEVDB/STAGE?driver=SQL+Server+Native+Client+11.0',
     'output': 'sqlite:///' + os.path.join(basedir, 'ebidash.db')
 }
-input_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+input_int_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/Integration?driver=SQL+Server+Native+Client+11.0')
+input_stg_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/STAGE?driver=SQL+Server+Native+Client+11.0')
 output_engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
 # create an unbound base our objects will inherit from
 Base = declarative_base()
-metadata = MetaData(bind=input_engine)
-Base.metadata = metadata
+metadata = MetaData()
+# metadata.reflect(bind=input_int_engine)
+# metadata.reflect(bind=input_stg_engine)
+# metadata = MetaData(bind=input_int_engine)
+# metadata = MetaData(bind=input_stg_engine)
+#Base.metadata = metadata
 g = globals()
-metadata.reflect()
-InputSession = sessionmaker(bind=input_engine)
-inputsession = InputSession()
+#metadata.reflect()
+# InputIntSession = sessionmaker(bind=input_int_engine)
+# InputSession = sessionmaker(bind=input_stg_engine)
+# inputsession = InputIntSession()
+
+wanted_tables_dict = {
+    SQLALCHEMY_BINDS['input_int']: ['INT_MKTCollectionDetails', 'INT_DIMLocation', 'Int_DimDonationType', 'DimDate'], 
+    SQLALCHEMY_BINDS['input_stg']: ['STG_HEMAZipCodeMaster']
+}
+
+inputsession = reflect_all_tables_to_declarative(wanted_tables_dict)
+
+# do something with the session and the orm objects
+results = inputsession.query(STG_HEMAZipCodeMaster).all()
+print("STG_HEMAZipCodeMaster:")
+for result in results:
+	print(result)
+	
+# do something with the session and the orm objects
+results = inputsession.query(DimDate).all()
+print("DIMDATE:")
+for result in results:
+	print(result)
+
 OutputSession = sessionmaker(bind=output_engine)
 outputsession = OutputSession()
-
-reflect_all_tables_to_declarative(['INT_MKTCollectionDetails', 'INT_DIMLocation', 'Int_DimDonationType', 'DimDate'])
 
 print("Build Monthly")
 pop_monthlyDonors()
 print("Build Daily")
 pop_dailyDonors()
+print("Build County Donor Count")
+pop_yearlyDonorsbyCounty()
 
-reflect_all_tables_to_declarative(['VW_INT_Agg_MonthlyDonorsPerLocation', 'VW_INT_Agg_DailyDonorsPerLocation'])
+reflect_all_tables_to_declarative(['VW_INT_Agg_MonthlyDonorsPerLocation', 'VW_INT_Agg_DailyDonorsPerLocation', 'VW_INT_Agg_YearlyDonorsbyCounty'])
