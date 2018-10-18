@@ -79,16 +79,11 @@ def generate_table(dataframe, max_rows=10):
         ]) 
         for i in range(min(len(dataframe), max_rows))]
     )    
- 
-YEARS = [2003, 2004, 2005, 2006, 2007, \
-		2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015]
-		
-mapbox_access_token = "pk.eyJ1IjoiamFja3AiLCJhIjoidGpzN0lXVSJ9.7YK6eRwUNFwd3ODZff6JvA" 
-
+    
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Connect to MS SQL Server via Windows Authentification:
-src_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/master?driver=SQL+Server+Native+Client+11.0')
+src_engine = sa.create_engine('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
 sql3_engine = sa.create_engine('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
 conn = sql3_engine.connect()
 
@@ -128,20 +123,11 @@ grouped.columns = ["num_persons"]
 
 server = Flask(__name__)
 
-# db = dataset.connect('mssql+pyodbc://ORLEBIDEVDB/master?driver=SQL+Server+Native+Client+11.0')
+# db = dataset.connect('mssql+pyodbc://ORLEBIDEVDB/INTEGRATION?driver=SQL+Server+Native+Client+11.0')
 db = dataset.connect('sqlite:///' + os.path.join(basedir, 'ebidash.db'))
 
 app = dash.Dash(__name__, server=server,url_base_pathname='/ebi_dash/', csrf_protect=False)
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
-
-
-latlongYearlyQuery = """
-SELECT *
-FROM VW_INT_Agg_YearlyDonorsbyCounty
-"""
-
-df_lat_lon = pd.read_sql(latlongYearlyQuery, sql3_engine)
-df_lat_lon['FIPS'] = df_lat_lon['FIPS'].apply(lambda x: str(x).zfill(5))
 
 # Begin main div for DASH:
 app.layout = html.Div(
@@ -178,48 +164,7 @@ app.layout = html.Div(
             ], className='GraphTitle'),
             # LINE GRAPH: Monthly Donor Count
             dcc.Graph(id='plDonors_MTD_Graph')
-        ],className='pldonor_line_graph'),
-		
-		
-		html.Div([
-			dcc.Slider(
-				id='years-slider',
-				min=min(YEARS),
-				max=max(YEARS),
-				value=min(YEARS),
-				marks={str(year): str(year) for year in YEARS},
-			),
-		], style={'width':400, 'margin':25}),
-		
-		html.P('Heatmap of donation locations per year {0}'.format(min(YEARS)),
-			id = 'heatmap-title',
-			style = {'fontWeight':600}
-		),
-
-		dcc.Graph(
-			id = 'county-choropleth',
-			figure = dict(
-				data=dict(
-					lat = df_lat_lon['Latitude '],
-					lon = df_lat_lon['Longitude'],
-					text = df_lat_lon['Hover'],
-					type = 'scattermapbox'
-				),
-				layout = dict(
-					mapbox = dict(
-						layers = [],
-						accesstoken = mapbox_access_token,
-						style = 'light',
-						center=dict(
-							lat=38.72490,
-							lon=-95.61446,
-						),
-						pitch=0,
-						zoom=2.5
-					)
-				)
-			)
-		),
+        ],className='pldonor_line_graph')
     ])
     
 @server.route('/api/plDailyDonors')
@@ -299,91 +244,7 @@ def update_figure(start, end, value):
         'layout': {'title': figureName}
     }
     
-# Heatmap of donations:
-@app.callback(
-		Output('county-choropleth', 'figure'),
-		[Input('years-slider', 'value'),
-		Input('opacity-slider', 'value'),
-		Input('colorscale-picker', 'colorscale'),
-		Input('hide-map-legend', 'values')],
-		[State('county-choropleth', 'figure')])
-def display_map(year, opacity, colorscale, map_checklist, figure):
-	cm = dict(zip(BINS, colorscale))
 
-	data = [dict(
-		lat = df_lat_lon['Latitude '],
-		lon = df_lat_lon['Longitude'],
-		text = df_lat_lon['Hover'],
-		type = 'scattermapbox',
-		hoverinfo = 'text',
-		#selected = dict(marker = dict(opacity=1)),
-		#unselected = dict(marker = dict(opacity = 0)),
-		marker = dict(size=5, color='white', opacity=0)
-	)]
-
-	annotations = [dict(
-		showarrow = False,
-		align = 'right',
-		text = '<b>Age-adjusted death rate<br>per county per year</b>',
-		x = 0.95,
-		y = 0.95,
-	)]
-
-	for i, bin in enumerate(reversed(BINS)):
-		color = cm[bin]
-		annotations.append(
-			dict(
-				arrowcolor = color,
-				text = bin,
-				x = 0.95,
-				y = 0.85-(i/20),
-				ax = -60,
-				ay = 0,
-				arrowwidth = 5,
-				arrowhead = 0,
-				bgcolor = '#EFEFEE'
-			)
-		)
-
-	if 'hide_legend' in map_checklist:
-		annotations = []
-
-	if 'layout' in figure:
-		lat = figure['layout']['mapbox']['center']['lat']
-		lon = figure['layout']['mapbox']['center']['lon']
-		zoom = figure['layout']['mapbox']['zoom']
-	else:
-		lat = 38.72490,
-		lon = -95.61446,
-		zoom = 2.5
-
-	layout = dict(
-		mapbox = dict(
-			layers = [],
-			accesstoken = mapbox_access_token,
-			style = 'light',
-			center=dict(lat=lat, lon=lon),
-			zoom=zoom
-		),
-		hovermode = 'closest',
-		margin = dict(r=0, l=0, t=0, b=0),
-		annotations = annotations,
-		dragmode = 'lasso'
-	)
-
-	base_url = 'https://raw.githubusercontent.com/jackparmer/mapbox-counties/master/'
-	for bin in BINS:
-		geo_layer = dict(
-			sourcetype = 'geojson',
-			source = base_url + str(year) + '/' + bin + '.geojson',
-			type = 'fill',
-			color = cm[bin],
-			opacity = opacity
-		)
-		layout['mapbox']['layers'].append(geo_layer)
-
-	fig = dict(data=data, layout=layout)
-	return fig
     
 
     
